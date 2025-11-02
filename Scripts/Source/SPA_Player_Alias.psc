@@ -1,5 +1,16 @@
 Scriptname SPA_Player_Alias extends ReferenceAlias  
 
-	Event OnPlayerLoadGame()
-		(GetOwningQuest() as SPA_Main).startup()
-	EndEvent
+
+event OnInit()
+    startup()
+endevent
+
+event OnPlayerLoadGame()
+    startup()
+endevent
+
+
+Function startup()
+    Debug.Notification("==== SKYRIM PARAIRED ACTOR LOADED ====")
+    (GetOwningQuest() as SPA_Main).startup()
+EndFunction
