@@ -19,6 +19,8 @@ Idle Property IdleVampireStandingBack  Auto
 Idle Property IdleVampireStandingFront  Auto  
 Idle Property pa_HugA  Auto
 
+Keyword Property Vampire  Auto
+
 function startup()
     Debug.Notification("SkyrimNet_Paired Main loaded...")
     MiscUtil.PrintConsole("SkyrimNet_Paired Main loaded...")
@@ -62,12 +64,42 @@ Function VampireBite(Actor attacker, string contextJson, string paramsJson) glob
     ; SkyrimNetApi.RegisterEvent("vampire_feed",prompt, attacker, target)
 EndFunction
 
+Function HugActor(Actor akOriginator, string contextJson, string paramsJson) global
+    actor akTarget = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
+    if (!akOriginator || !akTarget)
+        Debug.Trace("[SkyrimNetInternal] HugActor: akOriginator or akTarget is null")
+        return
+    endif
+
+    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
+    SPA_Main questInstance = questBase as SPA_Main
+
+    Debug.Trace("[SkyrimNetInternal] HugActor: quest Instance: "+ questInstance )
+    Debug.Trace("[SkyrimNetInternal] HugActor: Feeding " + akTarget.GetDisplayName() + " with " + akOriginator.GetDisplayName())
+
+    questInstance.hugClearAliases()
+    questInstance.hugFillAliases(akOriginator, akTarget)
+    questInstance.debugConsole("Staring Hug scene")
+    questInstance.triggerSceneHug()
+    questInstance.hugClearAliases()
+    string prompt = akOriginator.GetDisplayName() + " hugs "  + akTarget.GetDisplayName()
+    SkyrimNetApi.RegisterEvent("hug",prompt, akOriginator, akTarget)
+
+EndFunction
+
+
 Function registerPairedActions()
-    SkyrimNetApi.RegisterAction("FeedTarget", "Vampire Feed on target", \
+    SkyrimNetApi.RegisterAction("FeedTarget", "Vampire Feed on person", \
                         "SPA_Main", "FeedOnActor_IsEligible", \
                         "SPA_Main", "VampireBite", \
                         "", "PAPYRUS", \
                         1, "{\"target\": \"Actor\"}")
+
+    SkyrimNetApi.RegisterAction("HugTarget", "Hug person", \
+                        "SPA_Main", "HugActor_IsEligible", \
+                        "SPA_Main", "HugActor", \
+                        "", "PAPYRUS", \
+                        1, "{\"target\": \"Actor\"}")                        
 EndFunction
 
 Function registerEventSchemaFeed(bool isEphemeral = false)
@@ -120,8 +152,8 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120000
     ;     "}"
 
     String eventDataJson = "{" + \
-        "\"attacker\":\"" + attacker.GetDisplayName() + "\"," + \
-        "\"target\":\"" + target.GetDisplayName() + "\"," + \
+        "\"attacker\":\"" + attackerName + "\"," + \
+        "\"target\":\"" + targetName + "\"," + \
         "\"feed_type\":\"" + feedType + "\"," + \
         "\"was_detected\":" + boolToString(detected) + "," + \
         "\"in_combat\":" + boolToString(inCombat) + "," + \
@@ -135,15 +167,26 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120000
     ;     debugConsole("Invalid event data: " + eventDataJson)
     ; EndIf
 
+    debugConsole("Testing bool: "+boolToString(true))
+    debugConsole("Event Data JSON: " + eventDataJson)
+    debugConsole("JSON Length: " + StringUtil.GetLength(eventDataJson))
+
+    ; Validate before registering
+    if !SkyrimNetApi.ValidateEventData("vampire_feed", eventDataJson)
+        debugConsole("ERROR: Validation failed for event data!")
+        return
+    EndIf
+
     debugConsole(eventDataJson)
 
-    int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
-    if result == 0
-        debugConsole("SkyrimNet: Registered vampire feed event - " + eventId)
-    Else
-        debugConsole("SkyrimNet: Failed to register vampire feed event - " + eventId)
-    EndIf
-    ; SkyrimNetApi.RegisterEvent("vampire_feed", eventDataJson, attacker, target)
+    ; int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
+    ; if result == 0
+    ;     debugConsole("SkyrimNet: Registered vampire feed event - " + eventId)
+    ; Else
+    ;     debugConsole("SkyrimNet: Failed to register vampire feed event - " + eventId)
+    ; EndIf
+
+    SkyrimNetApi.RegisterEvent("vampire_feed", eventDataJson, attacker, target)
 
 EndFunction
 
@@ -261,10 +304,10 @@ function debugConsole(string in)
 EndFunction
 
 String Function boolToString(Bool b)
-    return (b as String)
-    ; if b
-    ;     return "true"
-    ; else
-    ;     return "false"
-    ; endif
+    if b
+        return "true"
+    else
+        return "false"
+    endif
 EndFunction
+
