@@ -61,7 +61,6 @@ Function VampireBite(Actor attacker, string contextJson, string paramsJson) glob
     string prompt = attacker.GetDisplayName() + " feed on "  + target.GetDisplayName()
 
     questInstance.registerVampireFeedEvent(attacker, target)
-    ; SkyrimNetApi.RegisterEvent("vampire_feed",prompt, attacker, target)
 EndFunction
 
 Function HugActor(Actor akOriginator, string contextJson, string paramsJson) global
@@ -309,19 +308,6 @@ function console(string in)
 EndFunction
 
 function debugConsole(string in)
-    ; Debug.Notification("SFE: "+in)
     MiscUtil.PrintConsole("SPA: "+in)
     Debug.Trace("SPA: "+in)
-EndFunction
-
-String Function boolToString(Bool b)
-    if b
-        return "true"
-    else
-        return "false"
-    endif
-EndFunction
-
-String Function testStrReturn(String b)
-    return b
 EndFunction
