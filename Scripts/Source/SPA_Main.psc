@@ -127,51 +127,59 @@ Function registerEventSchemaFeed(bool isEphemeral = false)
 
 EndFunction
 
-Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120000)
-    bool detected = attacker.IsDetectedBy(target)
+Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
+
+    bool wasDetected = attacker.IsDetectedBy(target)
     bool inCombat = attacker.IsInCombat()
     bool targetAware = target.IsDetectedBy(attacker)
 
     String attackerName = attacker.GetDisplayName()
-    String targetName = target.GetDisplayName()    
+    String targetName = target.GetDisplayName()
+
 
     String feedType = "normal"
     if inCombat
         feedType = "combat"
-    ElseIf !detected && target.GetSleepState() == 3
+    ElseIf target.GetSleepState() == 3 && !wasDetected
+
         feedType = "stealth_sleeping"
-    ElseIf !detected
+    ElseIf !wasDetected && !targetAware
         feedType = "stealth"
-    ElseIf targetAware
+    ElseIf wasDetected || targetAware
         feedType = "willing"
     EndIf
   
-    ; String eventDataJson = "{" + \
-    ;     "\"fooozzz\":\"" + casterName + "\"," + \
-    ;     "\"targetNPC\":\"" + castertargetName + \
-    ;     "}"
+    ; Papyrus workaround: papyrus will turn "true" to "TRUE" if returned via function
+    ; Which not work as valid json
+    ; Build entire JSON property strings to avoid capitalization
+    String detectedProp = "\"was_detected\":false"
+    if wasDetected
+        detectedProp = "\"was_detected\":true"
+    endif
+
+    String inCombatProp = "\"in_combat\":false"
+    if inCombat
+        inCombatProp = "\"in_combat\":true"
+    endif
+
+    String targetAwareProp = "\"target_aware\":false"
+    if targetAware
+        targetAwareProp = "\"target_aware\":true"
+    endif
 
     String eventDataJson = "{" + \
         "\"attacker\":\"" + attackerName + "\"," + \
         "\"target\":\"" + targetName + "\"," + \
         "\"feed_type\":\"" + feedType + "\"," + \
-        "\"was_detected\":" + boolToString(detected) + "," + \
-        "\"in_combat\":" + boolToString(inCombat) + "," + \
-        "\"target_aware\":" + boolToString(targetAware) + \
+        detectedProp + "," + \
+        inCombatProp + "," + \
+        targetAwareProp + \
         "}"
     
     String eventId = "vampirefeed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
     String description = attacker.GetDisplayName() + " feeds on " + target.GetDisplayName()
     
-    ; if !SkyrimNetApi.ValidateEventData("vampire_feed", eventDataJson)
-    ;     debugConsole("Invalid event data: " + eventDataJson)
-    ; EndIf
 
-    debugConsole("Testing bool: "+boolToString(true))
-    debugConsole("Event Data JSON: " + eventDataJson)
-    debugConsole("JSON Length: " + StringUtil.GetLength(eventDataJson))
-
-    ; Validate before registering
     if !SkyrimNetApi.ValidateEventData("vampire_feed", eventDataJson)
         debugConsole("ERROR: Validation failed for event data!")
         return
@@ -179,14 +187,17 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120000
 
     debugConsole(eventDataJson)
 
-    ; int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
-    ; if result == 0
-    ;     debugConsole("SkyrimNet: Registered vampire feed event - " + eventId)
-    ; Else
-    ;     debugConsole("SkyrimNet: Failed to register vampire feed event - " + eventId)
-    ; EndIf
-
-    SkyrimNetApi.RegisterEvent("vampire_feed", eventDataJson, attacker, target)
+    ; Comabt feed are registred as short lived events
+    if inCombat
+        int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
+        if result == 0
+            debugConsole("SkyrimNet: Registered vampire feed event - " + eventId)
+        Else
+            debugConsole("SkyrimNet: Failed to register vampire feed event - " + eventId)
+        EndIf
+    Else
+        SkyrimNetApi.RegisterEvent("vampire_feed", eventDataJson, attacker, target)
+    EndIf
 
 EndFunction
 
@@ -311,3 +322,6 @@ String Function boolToString(Bool b)
     endif
 EndFunction
 
+String Function testStrReturn(String b)
+    return b
+EndFunction
