@@ -30,14 +30,24 @@ function startup()
 endfunction
 
 
+
+
 bool Function FeedOnActor_IsEligible(Actor akActor, string contextJson, string paramsJson) global
-    return true
+    if !akActor
+        return false
+    endif
+    ; Vampire keyword (0x000A82BB from Skyrim.esm)
+    Keyword vampireKeyword = Game.GetFormFromFile(0x000A82BB, "Skyrim.esm") as Keyword
+    if !vampireKeyword
+        return false
+    endif
+
+    return akActor.HasKeyword(vampireKeyword)
 EndFunction
 
 bool Function HugActor_IsEligible(Actor akActor, string contextJson, string paramsJson) global
     return true
 EndFunction
-
 
 
 Function VampireBite(Actor attacker, string contextJson, string paramsJson) global
