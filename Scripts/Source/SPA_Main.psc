@@ -160,29 +160,29 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
   
     ; Papyrus workaround: papyrus will turn "true" to "TRUE" if returned via function
     ; Which not work as valid json
-    ; Build entire JSON property strings to avoid capitalization
-    String detectedProp = "\"was_detected\":false"
+    ; Convert booleans to lowercase string representations
+    String wasDetectedStr = "false"
     if wasDetected
-        detectedProp = "\"was_detected\":true"
+        wasDetectedStr = "true"
     endif
 
-    String inCombatProp = "\"in_combat\":false"
+    String inCombatStr = "false"
     if inCombat
-        inCombatProp = "\"in_combat\":true"
+        inCombatStr = "true"
     endif
 
-    String targetAwareProp = "\"target_aware\":false"
+    String targetAwareStr = "false"
     if targetAware
-        targetAwareProp = "\"target_aware\":true"
+        targetAwareStr = "true"
     endif
 
     String eventDataJson = "{" + \
         "\"attacker\":\"" + attackerName + "\"," + \
         "\"target\":\"" + targetName + "\"," + \
         "\"feed_type\":\"" + feedType + "\"," + \
-        detectedProp + "," + \
-        inCombatProp + "," + \
-        targetAwareProp + \
+        "\"was_detected\":" + wasDetectedStr + "," + \
+        "\"in_combat\":" + inCombatStr + "," + \
+        "\"target_aware\":" + targetAwareStr + \
         "}"
     
     String eventId = "vampirefeed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
