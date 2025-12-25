@@ -11,6 +11,6 @@ endevent
 
 
 Function startup()
-    Debug.Notification("==== SKYRIM PARAIRED ACTOR LOADED ====")
+    Debug.Notification("==== SKYRIM PAIRED ACTOR LOADED ====")
     (GetOwningQuest() as SPA_Main).startup()
 EndFunction

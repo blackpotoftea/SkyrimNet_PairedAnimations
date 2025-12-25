@@ -75,11 +75,11 @@ Function VampireBite(Actor attacker, string contextJson, string paramsJson) glob
     SPA_Main questInstance = questBase as SPA_Main
 
     questInstance.debugConsole("[SkyrimNetInternal] FeedOnActor: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] FeedOnActor: Feeding " + attacker.GetDisplayName() + " with " + target.GetDisplayName())
+    questInstance.debugConsole("[SkyrimNetInternal] FeedOnActor: " + attacker.GetDisplayName() + " feeding on " + target.GetDisplayName())
 
     questInstance.vampClearAliases()
     questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Staring Vampire Bite scene")
+    questInstance.debugConsole("Starting Vampire Bite scene")
     questInstance.triggerSceneVampireBite()
     questInstance.vampClearAliases()
     
@@ -89,19 +89,19 @@ EndFunction
 Function ExecuteTarget(Actor attacker, string contextJson, string paramsJson) global
     actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
     if (!attacker || !target)
-        Debug.Trace("[SkyrimNetInternal] VampireKillOnActor: akOriginator or akTarget is null")
+        Debug.Trace("[SkyrimNetInternal] ExecuteTarget: akOriginator or akTarget is null")
         return
     endif
 
     Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
     SPA_Main questInstance = questBase as SPA_Main
 
-    questInstance.debugConsole("[SkyrimNetInternal] KillActor: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] VampireActor: " + attacker.GetDisplayName() + " with " + target.GetDisplayName())
+    questInstance.debugConsole("[SkyrimNetInternal] ExecuteTarget: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] ExecuteTarget: " + attacker.GetDisplayName() + " executing " + target.GetDisplayName())
 
     questInstance.vampClearAliases()
     questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Staring Vampire Kill scene")
+    questInstance.debugConsole("Starting Execute Kill scene")
     questInstance.triggerSceneKillTarget()
     questInstance.vampClearAliases()
 
@@ -120,12 +120,12 @@ Function SneakExecuteTarget(Actor attacker, string contextJson, string paramsJso
     Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
     SPA_Main questInstance = questBase as SPA_Main
 
-    questInstance.debugConsole("[SkyrimNetInternal] Sneak KillActor: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] Attacker: " + attacker.GetDisplayName() + " with " + target.GetDisplayName())
+    questInstance.debugConsole("[SkyrimNetInternal] SneakExecuteTarget: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] SneakExecuteTarget: " + attacker.GetDisplayName() + " executing " + target.GetDisplayName())
 
     questInstance.vampClearAliases()
     questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Staring Seank Kill scene")
+    questInstance.debugConsole("Starting Sneak Kill scene")
     questInstance.triggerSceneSneakKillTarget()
     questInstance.vampClearAliases()
 
@@ -143,12 +143,12 @@ Function HugActor(Actor akOriginator, string contextJson, string paramsJson) glo
     Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
     SPA_Main questInstance = questBase as SPA_Main
 
-    Debug.Trace("[SkyrimNetInternal] HugActor: quest Instance: "+ questInstance )
-    Debug.Trace("[SkyrimNetInternal] HugActor: Feeding " + akTarget.GetDisplayName() + " with " + akOriginator.GetDisplayName())
+    questInstance.debugConsole("[SkyrimNetInternal] HugActor: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] HugActor: " + akOriginator.GetDisplayName() + " hugging " + akTarget.GetDisplayName())
 
     questInstance.hugClearAliases()
     questInstance.hugFillAliases(akOriginator, akTarget)
-    questInstance.debugConsole("Staring Hug scene")
+    questInstance.debugConsole("Starting Hug scene")
     questInstance.triggerSceneHug()
     questInstance.hugClearAliases()
     string prompt = akOriginator.GetDisplayName() + " hugs "  + akTarget.GetDisplayName()
@@ -168,7 +168,7 @@ Function registerPairedActions()
                         "SPA_Main", "ExecuteTarget", \
                         "", "PAPYRUS", \
                         1, "{\"target\": \"Actor\"}")    
-    SkyrimNetApi.RegisterAction("SilentkExecuteTarget", "Silently Kill target without combat if attacker is strong enough", \
+    SkyrimNetApi.RegisterAction("SilentExecuteTarget", "Silently Kill target without combat if attacker is strong enough", \
                         "SPA_Main", "ExecuteTarget_IsEligible", \
                         "SPA_Main", "SneakExecuteTarget", \
                         "", "PAPYRUS", \
@@ -266,7 +266,7 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
 
     debugConsole(eventDataJson)
 
-    ; Comabt feed are registred as short lived events
+    ; Combat feed are registered as short lived events
     if inCombat
         int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
         if result == 0
@@ -431,7 +431,7 @@ Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, boo
 	EndIf
 
     If (!RegisterForAnimationEvent(attacker, animEventWaitFor))
-		debugConsole("Attacker Failed to register for" + animEventVampire)
+		debugConsole("Attacker Failed to register for " + animEventWaitFor)
 	EndIf
 
     if wasEssential
