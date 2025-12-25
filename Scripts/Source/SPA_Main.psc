@@ -5,6 +5,8 @@ Package Property SPA_Hug  Auto
 
 Scene Property SPA_PairedAnim_VampireBite  Auto  
 Scene Property SPA_PairedAnim_Hug  Auto  
+Scene Property SPA_PairedAnim_Kill  Auto  
+Scene Property SPA_PairedAnim_SneakKill  Auto  
 
 ReferenceAlias Property VampAttackerRef  Auto  
 ReferenceAlias Property VampVictimRef  Auto  
@@ -19,7 +21,16 @@ Idle Property IdleVampireStandingBack  Auto
 Idle Property IdleVampireStandingFront  Auto  
 Idle Property pa_HugA  Auto
 
+;Idle Property KillMoveDecapSlash00  Auto  
+;Idle Property KillMove2HMStabFromBehind00  Auto  
+Idle Property pa_1HMKillMoveDecapSlash  Auto  
+Idle Property pa_1HMKillMoveBackStab  Auto  
+
 Keyword Property Vampire  Auto
+
+bool Property isPairedAnimRunning = false auto
+string Property animEventWaitFor = "PairEnd" AutoReadOnly
+string Property animEventVampire = "VFD_BloodDecals_Event" AutoReadOnly
 
 function startup()
     Debug.Notification("SkyrimNet_Paired Main loaded...")
@@ -30,9 +41,7 @@ function startup()
 endfunction
 
 
-
-
-bool Function FeedOnActor_IsEligible(Actor akActor, string contextJson, string paramsJson) global
+bool Function VampireFeed_IsEligible(Actor akActor, string contextJson, string paramsJson) global
     if !akActor
         return false
     endif
@@ -43,6 +52,11 @@ bool Function FeedOnActor_IsEligible(Actor akActor, string contextJson, string p
     endif
 
     return akActor.HasKeyword(vampireKeyword)
+EndFunction
+
+bool Function ExecuteTarget_IsEligible(Actor akActor, string contextJson, string paramsJson) global
+    ; Generic execution actions - always eligible if actor exists
+    return akActor != None
 EndFunction
 
 bool Function HugActor_IsEligible(Actor akActor, string contextJson, string paramsJson) global
@@ -68,7 +82,53 @@ Function VampireBite(Actor attacker, string contextJson, string paramsJson) glob
     questInstance.debugConsole("Staring Vampire Bite scene")
     questInstance.triggerSceneVampireBite()
     questInstance.vampClearAliases()
-    string prompt = attacker.GetDisplayName() + " feed on "  + target.GetDisplayName()
+    
+    questInstance.registerVampireFeedEvent(attacker, target)
+EndFunction
+
+Function ExecuteTarget(Actor attacker, string contextJson, string paramsJson) global
+    actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
+    if (!attacker || !target)
+        Debug.Trace("[SkyrimNetInternal] VampireKillOnActor: akOriginator or akTarget is null")
+        return
+    endif
+
+    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
+    SPA_Main questInstance = questBase as SPA_Main
+
+    questInstance.debugConsole("[SkyrimNetInternal] KillActor: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] VampireActor: " + attacker.GetDisplayName() + " with " + target.GetDisplayName())
+
+    questInstance.vampClearAliases()
+    questInstance.vampFillAliases(attacker, target)
+    questInstance.debugConsole("Staring Vampire Kill scene")
+    questInstance.triggerSceneKillTarget()
+    questInstance.vampClearAliases()
+
+
+    questInstance.registerVampireFeedEvent(attacker, target)
+EndFunction
+
+
+Function SneakExecuteTarget(Actor attacker, string contextJson, string paramsJson) global
+    actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
+    if (!attacker || !target)
+        Debug.Trace("[SkyrimNetInternal] SneakExecuteTarget: akOriginator or akTarget is null")
+        return
+    endif
+
+    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
+    SPA_Main questInstance = questBase as SPA_Main
+
+    questInstance.debugConsole("[SkyrimNetInternal] Sneak KillActor: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] Attacker: " + attacker.GetDisplayName() + " with " + target.GetDisplayName())
+
+    questInstance.vampClearAliases()
+    questInstance.vampFillAliases(attacker, target)
+    questInstance.debugConsole("Staring Seank Kill scene")
+    questInstance.triggerSceneSneakKillTarget()
+    questInstance.vampClearAliases()
+
 
     questInstance.registerVampireFeedEvent(attacker, target)
 EndFunction
@@ -99,16 +159,26 @@ EndFunction
 
 Function registerPairedActions()
     SkyrimNetApi.RegisterAction("FeedTarget", "Vampire Feed on person", \
-                        "SPA_Main", "FeedOnActor_IsEligible", \
+                        "SPA_Main", "VampireFeed_IsEligible", \
                         "SPA_Main", "VampireBite", \
                         "", "PAPYRUS", \
                         1, "{\"target\": \"Actor\"}")
+    SkyrimNetApi.RegisterAction("ExecuteTarget", "Kill target without combat if attacker is strong enough", \
+                        "SPA_Main", "ExecuteTarget_IsEligible", \
+                        "SPA_Main", "ExecuteTarget", \
+                        "", "PAPYRUS", \
+                        1, "{\"target\": \"Actor\"}")    
+    SkyrimNetApi.RegisterAction("SilentkExecuteTarget", "Silently Kill target without combat if attacker is strong enough", \
+                        "SPA_Main", "ExecuteTarget_IsEligible", \
+                        "SPA_Main", "SneakExecuteTarget", \
+                        "", "PAPYRUS", \
+                        1, "{\"target\": \"Actor\"}")    
 
     SkyrimNetApi.RegisterAction("HugTarget", "Hug person", \
                         "SPA_Main", "HugActor_IsEligible", \
                         "SPA_Main", "HugActor", \
                         "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")                        
+                        1, "{\"target\": \"Actor\"}")                  
 EndFunction
 
 Function registerEventSchemaFeed(bool isEphemeral = false)
@@ -191,7 +261,7 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
 
     if !SkyrimNetApi.ValidateEventData("vampire_feed", eventDataJson)
         debugConsole("ERROR: Validation failed for event data!")
-        return
+        ; return
     EndIf
 
     debugConsole(eventDataJson)
@@ -210,11 +280,20 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
 
 EndFunction
 
-function triggerSceneVampireBite()
+Function triggerSceneVampireBite()
     triggerScene(SPA_PairedAnim_VampireBite)
 EndFunction
 
-function triggerSceneHug()
+Function triggerSceneKillTarget()
+    triggerScene(SPA_PairedAnim_Kill)
+EndFunction
+
+Function triggerSceneSneakKillTarget()
+    triggerScene(SPA_PairedAnim_SneakKill)
+EndFunction
+
+
+Function triggerSceneHug()
     triggerScene(SPA_PairedAnim_Hug)
 EndFunction
 
@@ -233,6 +312,7 @@ Function triggerScene(Scene sceneToRun, int timeout = 20)
         debugConsole("Scene timeout reached. Scene is still playing.. bailing...")
         sceneToRun.Stop()
     EndIf
+    debugConsole("Package finished running")
 EndFunction
 
 Idle Function calcFeedAnimation(Actor attacker, Actor target)
@@ -271,6 +351,27 @@ Idle Function calcFeedAnimation(Actor attacker, Actor target)
     return feedAnimIdle
 EndFunction
 
+Idle Function calcKillMove(Actor attacker, Actor victim)
+    Idle killmoveIdle
+    
+    ; Calculate angle between attacker and victim
+    float headingAngle = victim.GetHeadingAngle(attacker)
+    
+    ; Check if victim is facing away (back attack)
+    if (headingAngle < -90 || headingAngle > 90)
+        ; Behind the victim - use backstab killmove
+        killmoveIdle = pa_1HMKillMoveBackStab
+        debugConsole("Selected backstab killmove from behind")
+    else
+        ; Facing the victim - use frontal decapitation
+        killmoveIdle = pa_1HMKillMoveDecapSlash
+        debugConsole("Selected decapitation killmove from front")
+    endif
+    
+    debugConsole("Getting Killmove animation: " + killmoveIdle)
+    return killmoveIdle
+EndFunction
+
 Function playBiteAnimatoin()
     _playBiteAnimatoin(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef())
 EndFunction
@@ -288,9 +389,153 @@ Function _playHugAnimation(Actor attacker, Actor victim)
     playPairedAnimation(attacker, victim, pa_HugA)
 EndFunction
 
-Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
-    bool playingAnimation = attacker.PlayIdleWithTarget(anim, victim as ObjectReference)
-    debugConsole("player anim:"+ anim + " anim status : "+playingAnimation)
+Function playKillActor(bool suppressAlarm=false)
+    _killActor(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef(), false, false, suppressAlarm)
+EndFunction
+
+Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, bool isProtected=false, bool suppressAlarm=false)
+
+    if !ValidateKill(attacker, victim, allowEssential, isProtected)
+        return
+    endif
+
+    ActorBase victimBase = victim.GetBaseObject() as ActorBase
+    bool wasEssential = victimBase.IsEssential()
+    bool wasProtected = victimBase.IsProtected()
+    bool canKill = true
+
+    if wasEssential
+        if !allowEssential
+            Debug.Trace("Cannot kill essential actor: " + victim.GetDisplayName())
+            canKill = false
+        endif
+    elseif wasProtected
+        if !isProtected && attacker != Game.GetPlayer()
+            Debug.Trace("Protected actor can only be killed by player: " + victim.GetDisplayName())
+            canKill = false
+        endif
+    endif
+
+        if !canKill
+        return
+    endif
+
+    AlignActorsForKill(attacker, victim)
+
+
+    Debug.SendAnimationEvent(victim, "IdleStop")
+    ToggleRestraints(victim, true)
+
+    If (!RegisterForAnimationEvent(attacker, animEventVampire))
+		debugConsole("Attacker Failed to register for" + animEventVampire)
+	EndIf
+
+    If (!RegisterForAnimationEvent(attacker, animEventWaitFor))
+		debugConsole("Attacker Failed to register for" + animEventVampire)
+	EndIf
+
+    if wasEssential
+        victimBase.SetEssential(false)
+    endif
+    if wasProtected
+        victimBase.SetProtected(false)
+    endif
+
+    ; Suppress alarm/crime if requested
+    if suppressAlarm
+        victim.StopCombatAlarm()
+        victim.SetNoBleedoutRecovery(true)
+    endif
+
+    Idle selectedKillmove = calcKillMove(attacker, victim)
+    bool animStarted = playPairedAnimation(attacker, victim, selectedKillmove)
+    if !animStarted
+        victim.Kill(attacker)
+    endif
+
+    ToggleRestraints(victim, false)
+    UnregisterForAnimationEvent(attacker, animEventVampire)
+
+    if !victim.IsDead()
+        if wasEssential
+            victimBase.SetEssential(true)
+        endif
+        if wasProtected
+            victimBase.SetProtected(true)
+        endif
+    endif
+EndFunction
+
+bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
+    return attacker.PlayIdleWithTarget(anim, victim)
+EndFunction
+
+
+Event OnAnimationEvent(ObjectReference akSource, string asEventName)
+	debugConsole("Animation event received: " + asEventName)
+	if asEventName == animEventVampire
+		debugConsole("VampireFeed event detected - sendin mod event")
+		registerVampireFeedEvent(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef())
+        UnregisterForAnimationEvent(VampAttackerRef.GetActorRef(), animEventVampire)
+    endif
+endEvent
+
+Function ToggleRestraints(Actor victim, bool lock)
+    if lock
+        Debug.SendAnimationEvent(victim, "IdleStop")
+    endif
+    victim.SetRestrained(lock)
+    victim.SetDontMove(lock)
+EndFunction
+
+Function AlignActorsForKill(Actor attacker, Actor victim)
+    float distance = attacker.GetDistance(victim)
+    
+    ; Move closer
+    if distance > 120
+        attacker.MoveTo(victim, 100 * Math.Sin(victim.GetAngleZ()), 100 * Math.Cos(victim.GetAngleZ()), 0)
+        Utility.Wait(0.1)
+    endif
+
+    ; Rotate Victim
+    float headingAngle = victim.GetHeadingAngle(attacker)
+    float targetAngle = attacker.GetAngleZ()
+
+    if (headingAngle > -90 && headingAngle < 90)
+        targetAngle += 180.0 ; Face to Face
+    endif
+    
+    if targetAngle >= 360.0
+        targetAngle -= 360.0
+    endif
+
+    victim.SetAngle(victim.GetAngleX(), victim.GetAngleY(), targetAngle)
+EndFunction
+
+bool Function ValidateKill(Actor attacker, Actor victim, bool allowEssential, bool allowProtected)
+    If !attacker || !victim || attacker.IsDead() || victim.IsDead()
+        return false
+    EndIf 
+
+    int levelDifference = victim.GetLevel() - attacker.GetLevel()
+    if levelDifference > 10
+        Debug.Trace("Target too high level")
+        return false
+    endif
+
+    ActorBase vBase = victim.GetBaseObject() as ActorBase
+    
+    if vBase.IsEssential() && !allowEssential
+        Debug.Trace("Target is Essential")
+        return false
+    endif
+
+    if vBase.IsProtected() && !allowProtected && attacker != Game.GetPlayer()
+        Debug.Trace("Target is Protected and attacker is not Player")
+        return false
+    endif
+
+    return true
 EndFunction
 
 Function vampClearAliases()
