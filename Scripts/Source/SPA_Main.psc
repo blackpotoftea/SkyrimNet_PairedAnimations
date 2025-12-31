@@ -7,6 +7,7 @@ Scene Property SPA_PairedAnim_VampireBite  Auto
 Scene Property SPA_PairedAnim_Hug  Auto  
 Scene Property SPA_PairedAnim_Kill  Auto  
 Scene Property SPA_PairedAnim_SneakKill  Auto  
+Scene Property SPA_PairedAnim_StandTalk  Auto  
 
 ReferenceAlias Property VampAttackerRef  Auto  
 ReferenceAlias Property VampVictimRef  Auto  
@@ -20,11 +21,10 @@ Idle Property VampireFeedingBedRollRight_Loose  Auto
 Idle Property IdleVampireStandingBack  Auto  
 Idle Property IdleVampireStandingFront  Auto  
 Idle Property pa_HugA  Auto
-
-;Idle Property KillMoveDecapSlash00  Auto  
-;Idle Property KillMove2HMStabFromBehind00  Auto  
 Idle Property pa_1HMKillMoveDecapSlash  Auto  
 Idle Property pa_1HMKillMoveBackStab  Auto  
+
+STATIC Property SPA_XMarker  Auto  
 
 Keyword Property Vampire  Auto
 
@@ -106,7 +106,7 @@ Function ExecuteTarget(Actor attacker, string contextJson, string paramsJson) gl
     questInstance.vampClearAliases()
 
 
-    questInstance.registerVampireFeedEvent(attacker, target)
+    ; questInstance.registerVampireFeedEvent(attacker, target)
 EndFunction
 
 
@@ -130,7 +130,7 @@ Function SneakExecuteTarget(Actor attacker, string contextJson, string paramsJso
     questInstance.vampClearAliases()
 
 
-    questInstance.registerVampireFeedEvent(attacker, target)
+    ; questInstance.registerVampireFeedEvent(attacker, target)
 EndFunction
 
 Function HugActor(Actor akOriginator, string contextJson, string paramsJson) global
@@ -156,6 +156,27 @@ Function HugActor(Actor akOriginator, string contextJson, string paramsJson) glo
 
 EndFunction
 
+Function StandTalkActor(Actor akOriginator, string contextJson, string paramsJson) global
+    actor akTarget = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
+    if (!akOriginator || !akTarget)
+        Debug.Trace("[SkyrimNetInternal] TeamHuddle: akOriginator or akTarget is null")
+        return
+    endif
+
+    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
+    SPA_Main questInstance = questBase as SPA_Main
+
+    questInstance.debugConsole("[SkyrimNetInternal] TeamHuddle: quest Instance: "+ questInstance )
+    questInstance.debugConsole("[SkyrimNetInternal] TeamHuddle: " + akOriginator.GetDisplayName() + " talking with " + akTarget.GetDisplayName())
+
+    questInstance.hugClearAliases()
+    questInstance.hugFillAliases(akOriginator, akTarget)
+    questInstance.debugConsole("Starting TeamHuddle scene")
+    questInstance.triggerSceneStandTalk(60)
+    questInstance.hugClearAliases()
+    questInstance.debugConsole("Ending TeamHuddle scene")
+EndFunction
+
 
 Function registerPairedActions()
     SkyrimNetApi.RegisterAction("FeedTarget", "Vampire Feed on person", \
@@ -178,7 +199,12 @@ Function registerPairedActions()
                         "SPA_Main", "HugActor_IsEligible", \
                         "SPA_Main", "HugActor", \
                         "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")                  
+                        1, "{\"target\": \"Actor\"}")
+    ; SkyrimNetApi.RegisterAction("TeamHuddle", "Team huddle - gather and chat without wandering off", \
+    ;                     "SPA_Main", "HugActor_IsEligible", \
+    ;                     "SPA_Main", "StandTalkActor", \
+    ;                     "", "PAPYRUS", \
+    ;                     1, "{\"target\": \"Actor\"}")
 EndFunction
 
 Function registerEventSchemaFeed(bool isEphemeral = false)
@@ -292,9 +318,12 @@ Function triggerSceneSneakKillTarget()
     triggerScene(SPA_PairedAnim_SneakKill)
 EndFunction
 
-
 Function triggerSceneHug()
     triggerScene(SPA_PairedAnim_Hug)
+EndFunction
+
+Function triggerSceneStandTalk(int timeout = 20)
+    triggerScene(SPA_PairedAnim_StandTalk, timeout)
 EndFunction
 
 Function triggerScene(Scene sceneToRun, int timeout = 20)
@@ -393,8 +422,12 @@ Function playKillActor(bool suppressAlarm=false)
     _killActor(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef(), false, false, suppressAlarm)
 EndFunction
 
-Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, bool isProtected=false, bool suppressAlarm=false)
+bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
+    return attacker.PlayIdleWithTarget(anim, victim)
+EndFunction
 
+
+Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, bool isProtected=false, bool suppressAlarm=false)
     if !ValidateKill(attacker, victim, allowEssential, isProtected)
         return
     endif
@@ -464,10 +497,6 @@ Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, boo
             victimBase.SetProtected(true)
         endif
     endif
-EndFunction
-
-bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
-    return attacker.PlayIdleWithTarget(anim, victim)
 EndFunction
 
 
@@ -566,3 +595,4 @@ function debugConsole(string in)
     MiscUtil.PrintConsole("SPA: "+in)
     Debug.Trace("SPA: "+in)
 EndFunction
+
