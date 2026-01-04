@@ -26,7 +26,8 @@ Idle Property pa_1HMKillMoveBackStab  Auto
 
 STATIC Property SPA_XMarker  Auto  
 
-Keyword Property Vampire  Auto
+ActorBase Property DLC1Serana  Auto
+Keyword Property vampire_keyword  Auto  
 
 bool Property isPairedAnimRunning = false auto
 string Property animEventWaitFor = "PairEnd" AutoReadOnly
@@ -45,6 +46,15 @@ bool Function VampireFeed_IsEligible(Actor akActor, string contextJson, string p
     if !akActor
         return false
     endif
+
+    ; Check for Serana specifically by actor ID (she doesn't always have the vampire keyword)
+    ; Serana's base actor form ID: 0x02002B74 from Dawnguard.esm
+    ActorBase baseActor = akActor.GetBaseObject() as ActorBase
+    Form seranaForm = Game.GetFormFromFile(0x02002B74, "Dawnguard.esm")
+    if seranaForm && baseActor == seranaForm
+        return true
+    endif
+
     ; Vampire keyword (0x000A82BB from Skyrim.esm)
     Keyword vampireKeyword = Game.GetFormFromFile(0x000A82BB, "Skyrim.esm") as Keyword
     if !vampireKeyword
@@ -217,6 +227,7 @@ Function registerEventSchemaFeed(bool isEphemeral = false)
         "{\"name\":\"target_aware\",\"type\":2,\"required\":false,\"description\":\"Whether the target was aware of the attacker\",\"defaultValue\":false}" + \
         "]"
 
+
     String formatTemplatesJson = "{" + \
         "\"recent_events\":\"**{{attacker}}** feeds on {{target}}{{#if in_combat}} during combat{{/if}}{{#if was_detected}} (detected!){{/if}} ({{time_desc}})\"," + \
         "\"raw\":\"{{attacker}} fed on {{target}}\"," + \
@@ -228,7 +239,7 @@ Function registerEventSchemaFeed(bool isEphemeral = false)
                                 "A vampire feeding on a victim", \
                                 fieldsJson, formatTemplatesJson, isEphemeral, 120000)
 
-    Debug.Trace("SkyrimNet: Registered vampire_feed event schema")
+    console("Registered vampire_feed event schema")
 
 EndFunction
 
@@ -595,4 +606,3 @@ function debugConsole(string in)
     MiscUtil.PrintConsole("SPA: "+in)
     Debug.Trace("SPA: "+in)
 EndFunction
-
