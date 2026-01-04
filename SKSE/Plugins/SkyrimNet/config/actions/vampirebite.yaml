@@ -1,0 +1,14 @@
+name: VampireBiteTarget
+description: Vampire feed another character. Use by willing character if they have verably agreed being fed upon
+questEditorId: SN_PairedAnim_Main
+scriptName: SPA_Main
+eligibilityFunctionName: VampireFeed_IsEligible
+executionFunctionName: VampireBite_Execute
+parameterMapping:
+  - type: dynamic
+    name: akActor1
+    description: The person feeding on the target
+  - type: dynamic
+    name: akActor2
+    description: The target that feed upon
+enabled: true

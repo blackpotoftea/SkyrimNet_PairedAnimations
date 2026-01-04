@@ -37,133 +37,112 @@ function startup()
     Debug.Notification("SkyrimNet_Paired Main loaded...")
     MiscUtil.PrintConsole("SkyrimNet_Paired Main loaded...")
 
-    registerPairedActions()
     registerEventSchemaFeed()
+    registerEventSchemaFeedFailed()
 endfunction
 
 
-bool Function VampireFeed_IsEligible(Actor akActor, string contextJson, string paramsJson) global
-    if !akActor
+bool Function VampireFeed_IsEligible(Actor akActor1, Actor akActor2)
+    if !akActor1 || !akActor2
+        console("Invalid targets: Invalid actor(s) ")
         return false
     endif
 
-    ; Check for Serana specifically by actor ID (she doesn't always have the vampire keyword)
-    ; Serana's base actor form ID: 0x02002B74 from Dawnguard.esm
-    ActorBase baseActor = akActor.GetBaseObject() as ActorBase
-    Form seranaForm = Game.GetFormFromFile(0x02002B74, "Dawnguard.esm")
-    if seranaForm && baseActor == seranaForm
+    ActorBase baseActor = akActor1.GetBaseObject() as ActorBase
+    if baseActor == DLC1Serana
         return true
     endif
 
-    ; Vampire keyword (0x000A82BB from Skyrim.esm)
-    Keyword vampireKeyword = Game.GetFormFromFile(0x000A82BB, "Skyrim.esm") as Keyword
-    if !vampireKeyword
+    return akActor1.HasKeyword(vampire_keyword)
+EndFunction
+
+bool Function ExecuteTarget_IsEligible(Actor akActor1, Actor akActor2)
+    if !akActor1 || !akActor2
+        console("Invalid targets: Invalid actor(s)")
         return false
     endif
 
-    return akActor.HasKeyword(vampireKeyword)
+    if akActor2.IsDead()
+        console("Invalid target: Target is already dead")
+        return false
+    endif
+
+    ; Generic execution actions - eligible if actors exist and target is alive
+    return true
 EndFunction
 
-bool Function ExecuteTarget_IsEligible(Actor akActor, string contextJson, string paramsJson) global
-    ; Generic execution actions - always eligible if actor exists
-    return akActor != None
-EndFunction
-
-bool Function HugActor_IsEligible(Actor akActor, string contextJson, string paramsJson) global
+bool Function HugActor_IsEligible(Actor akActor1, Actor akActor2)
+    if !akActor1 || !akActor2
+        console("Invalid targets: Invalid actor(s)")
+        return false
+    endif
     return true
 EndFunction
 
 
-Function VampireBite(Actor attacker, string contextJson, string paramsJson) global
-    actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
-    if (!attacker || !target)
-        Debug.Trace("[SkyrimNetInternal] FeedOnActor: akOriginator or akTarget is null")
+Function VampireBite_Execute(Actor akActor1, Actor akActor2)
+    if !akActor1 || !akActor2
+        Debug.Trace("[SkyrimNetInternal] FeedOnActor: Invalid actor(s)")
         return
     endif
+    Actor attacker = akActor1
+    Actor target   = akActor2
 
-    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
-    SPA_Main questInstance = questBase as SPA_Main
+    debugConsole("[SkyrimNetInternal] FeedOnActor: " + attacker.GetDisplayName() + " feeding on " + target.GetDisplayName())
 
-    questInstance.debugConsole("[SkyrimNetInternal] FeedOnActor: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] FeedOnActor: " + attacker.GetDisplayName() + " feeding on " + target.GetDisplayName())
-
-    questInstance.vampClearAliases()
-    questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Starting Vampire Bite scene")
-    questInstance.triggerSceneVampireBite()
-    questInstance.vampClearAliases()
-    
-    questInstance.registerVampireFeedEvent(attacker, target)
+    vampClearAliases()
+    vampFillAliases(attacker, target)
+    debugConsole("Starting Vampire Bite scene")
+    triggerSceneVampireBite()
+    vampClearAliases()
 EndFunction
 
-Function ExecuteTarget(Actor attacker, string contextJson, string paramsJson) global
-    actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
-    if (!attacker || !target)
-        Debug.Trace("[SkyrimNetInternal] ExecuteTarget: akOriginator or akTarget is null")
+Function ExecuteTarget_Execute(Actor akActor1, Actor akActor2, bool silent = false)
+    if !akActor1 || !akActor2
+        Debug.Trace("[SkyrimNetInternal] ExecuteTarget: Invalid actor(s)")
         return
     endif
+    Actor attacker = akActor1
+    Actor target = akActor2
 
-    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
-    SPA_Main questInstance = questBase as SPA_Main
+    if silent
+        debugConsole("[SkyrimNetInternal] SneakExecuteTarget: " + attacker.GetDisplayName() + " silently executing " + target.GetDisplayName())
+    else
+        debugConsole("[SkyrimNetInternal] ExecuteTarget: " + attacker.GetDisplayName() + " executing " + target.GetDisplayName())
+    endif
 
-    questInstance.debugConsole("[SkyrimNetInternal] ExecuteTarget: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] ExecuteTarget: " + attacker.GetDisplayName() + " executing " + target.GetDisplayName())
+    vampClearAliases()
+    vampFillAliases(attacker, target)
 
-    questInstance.vampClearAliases()
-    questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Starting Execute Kill scene")
-    questInstance.triggerSceneKillTarget()
-    questInstance.vampClearAliases()
+    if silent
+        debugConsole("Starting Sneak Kill scene")
+        triggerSceneSneakKillTarget()
+    else
+        debugConsole("Starting Execute Kill scene")
+        triggerSceneKillTarget()
+    endif
 
-
-    ; questInstance.registerVampireFeedEvent(attacker, target)
+    vampClearAliases()
 EndFunction
 
-
-Function SneakExecuteTarget(Actor attacker, string contextJson, string paramsJson) global
-    actor target = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
-    if (!attacker || !target)
-        Debug.Trace("[SkyrimNetInternal] SneakExecuteTarget: akOriginator or akTarget is null")
+Function HugActor_Execute(Actor akActor1, Actor akActor2)
+    if !akActor1 || !akActor2
+        Debug.Trace("[SkyrimNetInternal] HugActor: Invalid actor(s)")
         return
     endif
+    Actor hugger = akActor1
+    Actor target = akActor2
 
-    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
-    SPA_Main questInstance = questBase as SPA_Main
+    debugConsole("[SkyrimNetInternal] HugActor: " + hugger.GetDisplayName() + " hugging " + target.GetDisplayName())
 
-    questInstance.debugConsole("[SkyrimNetInternal] SneakExecuteTarget: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] SneakExecuteTarget: " + attacker.GetDisplayName() + " executing " + target.GetDisplayName())
+    hugClearAliases()
+    hugFillAliases(hugger, target)
+    debugConsole("Starting Hug scene")
+    triggerSceneHug()
+    hugClearAliases()
 
-    questInstance.vampClearAliases()
-    questInstance.vampFillAliases(attacker, target)
-    questInstance.debugConsole("Starting Sneak Kill scene")
-    questInstance.triggerSceneSneakKillTarget()
-    questInstance.vampClearAliases()
-
-
-    ; questInstance.registerVampireFeedEvent(attacker, target)
-EndFunction
-
-Function HugActor(Actor akOriginator, string contextJson, string paramsJson) global
-    actor akTarget = SkyrimNetApi.GetJsonActor(paramsJson, "target", Game.GetPlayer())
-    if (!akOriginator || !akTarget)
-        Debug.Trace("[SkyrimNetInternal] HugActor: akOriginator or akTarget is null")
-        return
-    endif
-
-    Quest questBase = Quest.GetQuest("SN_PairedAnim_Main") ;
-    SPA_Main questInstance = questBase as SPA_Main
-
-    questInstance.debugConsole("[SkyrimNetInternal] HugActor: quest Instance: "+ questInstance )
-    questInstance.debugConsole("[SkyrimNetInternal] HugActor: " + akOriginator.GetDisplayName() + " hugging " + akTarget.GetDisplayName())
-
-    questInstance.hugClearAliases()
-    questInstance.hugFillAliases(akOriginator, akTarget)
-    questInstance.debugConsole("Starting Hug scene")
-    questInstance.triggerSceneHug()
-    questInstance.hugClearAliases()
-    string prompt = akOriginator.GetDisplayName() + " hugs "  + akTarget.GetDisplayName()
-    SkyrimNetApi.RegisterEvent("hug",prompt, akOriginator, akTarget)
-
+    string prompt = hugger.GetDisplayName() + " hugs " + target.GetDisplayName()
+    SkyrimNetApi.RegisterEvent("hug", prompt, hugger, target)
 EndFunction
 
 Function StandTalkActor(Actor akOriginator, string contextJson, string paramsJson) global
@@ -185,36 +164,6 @@ Function StandTalkActor(Actor akOriginator, string contextJson, string paramsJso
     questInstance.triggerSceneStandTalk(60)
     questInstance.hugClearAliases()
     questInstance.debugConsole("Ending TeamHuddle scene")
-EndFunction
-
-
-Function registerPairedActions()
-    SkyrimNetApi.RegisterAction("FeedTarget", "Vampire Feed on person", \
-                        "SPA_Main", "VampireFeed_IsEligible", \
-                        "SPA_Main", "VampireBite", \
-                        "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")
-    SkyrimNetApi.RegisterAction("ExecuteTarget", "Kill target without combat if attacker is strong enough", \
-                        "SPA_Main", "ExecuteTarget_IsEligible", \
-                        "SPA_Main", "ExecuteTarget", \
-                        "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")    
-    SkyrimNetApi.RegisterAction("SilentExecuteTarget", "Silently Kill target without combat if attacker is strong enough", \
-                        "SPA_Main", "ExecuteTarget_IsEligible", \
-                        "SPA_Main", "SneakExecuteTarget", \
-                        "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")    
-
-    SkyrimNetApi.RegisterAction("HugTarget", "Hug person", \
-                        "SPA_Main", "HugActor_IsEligible", \
-                        "SPA_Main", "HugActor", \
-                        "", "PAPYRUS", \
-                        1, "{\"target\": \"Actor\"}")
-    ; SkyrimNetApi.RegisterAction("TeamHuddle", "Team huddle - gather and chat without wandering off", \
-    ;                     "SPA_Main", "HugActor_IsEligible", \
-    ;                     "SPA_Main", "StandTalkActor", \
-    ;                     "", "PAPYRUS", \
-    ;                     1, "{\"target\": \"Actor\"}")
 EndFunction
 
 Function registerEventSchemaFeed(bool isEphemeral = false)
@@ -243,8 +192,60 @@ Function registerEventSchemaFeed(bool isEphemeral = false)
 
 EndFunction
 
-Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
+Function registerEventSchemaFeedFailed(bool isEphemeral = false)
+    String fieldsJson = "[" + \
+        "{\"name\":\"attacker\",\"type\":0,\"required\":true,\"description\":\"The vampire who attempted to feed\"}," + \
+        "{\"name\":\"target\",\"type\":0,\"required\":true,\"description\":\"The intended victim\"}," + \
+        "{\"name\":\"failure_reason\",\"type\":0,\"required\":false,\"description\":\"Why the feeding failed\",\"defaultValue\":\"animation_failed\"}," + \
+        "{\"name\":\"was_in_combat\",\"type\":2,\"required\":false,\"description\":\"Whether the vampire was in combat during the attempt\",\"defaultValue\":false}," + \
+        "{\"name\":\"target_state\",\"type\":0,\"required\":false,\"description\":\"State of target during attempt\",\"defaultValue\":\"unknown\"}" + \
+        "]"
 
+    String formatTemplatesJson = "{" + \
+        "\"recent_events\":\"**{{attacker}}** attempted to feed on {{target}} but failed ({{failure_reason}}) ({{time_desc}})\"," + \
+        "\"raw\":\"{{attacker}} failed to feed on {{target}}\"," + \
+        "\"compact\":\"{{attacker}} -> {{target}} (failed: {{failure_reason}})\"," + \
+        "\"verbose\":\"Failed Vampire Feed: {{attacker}} attempted to feed on {{target}} - Reason: {{failure_reason}}, Combat: {{was_in_combat}}, Target State: {{target_state}}\"" + \
+        "}"
+
+    SkyrimNetApi.RegisterEventSchema("vampire_feed_failed", "Failed Vampire Feeding Attempt", \
+                                "A vampire's failed attempt to feed on a victim", \
+                                fieldsJson, formatTemplatesJson, isEphemeral, 120000)
+
+    console("Registered vampire_feed_failed event schema")
+
+EndFunction
+
+; Helper function: Convert boolean to JSON-compatible string
+String Function BoolToJsonString(bool value)
+    if value
+        return "true"
+    endif
+    return "false"
+EndFunction
+
+; Helper function: Register event with combat-based logic
+Function RegisterEventByContext(string eventId, string eventType, string description, string eventDataJson, int ttl, Actor attacker, Actor target, bool inCombat)
+    if !SkyrimNetApi.ValidateEventData(eventType, eventDataJson)
+        debugConsole("ERROR: Validation failed for " + eventType + " event data!")
+        return
+    EndIf
+
+    debugConsole(eventDataJson)
+
+    if inCombat
+        int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, eventType, description, eventDataJson, ttl, attacker, target)
+        if result == 0
+            debugConsole("SkyrimNet: Registered " + eventType + " event - " + eventId)
+        Else
+            debugConsole("SkyrimNet: Failed to register " + eventType + " event - " + eventId)
+        EndIf
+    Else
+        SkyrimNetApi.RegisterEvent(eventType, eventDataJson, attacker, target)
+    EndIf
+EndFunction
+
+Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
     bool wasDetected = attacker.IsDetectedBy(target)
     bool inCombat = attacker.IsInCombat()
     bool targetAware = target.IsDetectedBy(attacker)
@@ -252,81 +253,80 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
     String attackerName = attacker.GetDisplayName()
     String targetName = target.GetDisplayName()
 
-
+    ; Determine feed type based on context
     String feedType = "normal"
     if inCombat
         feedType = "combat"
     ElseIf target.GetSleepState() == 3 && !wasDetected
-
         feedType = "stealth_sleeping"
     ElseIf !wasDetected && !targetAware
         feedType = "stealth"
     ElseIf wasDetected || targetAware
         feedType = "willing"
     EndIf
-  
-    ; Papyrus workaround: papyrus will turn "true" to "TRUE" if returned via function
-    ; Which not work as valid json
-    ; Convert booleans to lowercase string representations
-    String wasDetectedStr = "false"
-    if wasDetected
-        wasDetectedStr = "true"
-    endif
-
-    String inCombatStr = "false"
-    if inCombat
-        inCombatStr = "true"
-    endif
-
-    String targetAwareStr = "false"
-    if targetAware
-        targetAwareStr = "true"
-    endif
 
     String eventDataJson = "{" + \
         "\"attacker\":\"" + attackerName + "\"," + \
         "\"target\":\"" + targetName + "\"," + \
         "\"feed_type\":\"" + feedType + "\"," + \
-        "\"was_detected\":" + wasDetectedStr + "," + \
-        "\"in_combat\":" + inCombatStr + "," + \
-        "\"target_aware\":" + targetAwareStr + \
+        "\"was_detected\":" + BoolToJsonString(wasDetected) + "," + \
+        "\"in_combat\":" + BoolToJsonString(inCombat) + "," + \
+        "\"target_aware\":" + BoolToJsonString(targetAware) + \
         "}"
-    
+
     String eventId = "vampirefeed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
-    String description = attacker.GetDisplayName() + " feeds on " + target.GetDisplayName()
-    
+    String description = attackerName + " feeds on " + targetName
 
-    if !SkyrimNetApi.ValidateEventData("vampire_feed", eventDataJson)
-        debugConsole("ERROR: Validation failed for event data!")
-        ; return
+    RegisterEventByContext(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target, inCombat)
+EndFunction
+
+Function registerVampireFeedFailedEvent(Actor attacker, Actor target, string failureReason = "animation_failed", int ttl = 120)
+    if !attacker || !target
+        debugConsole("ERROR: Cannot register failed feed event - invalid actors")
+        return
     EndIf
 
-    debugConsole(eventDataJson)
+    bool inCombat = attacker.IsInCombat()
 
-    ; Combat feed are registered as short lived events
-    if inCombat
-        int result = SkyrimNetApi.RegisterShortLivedEvent(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target)
-        if result == 0
-            debugConsole("SkyrimNet: Registered vampire feed event - " + eventId)
-        Else
-            debugConsole("SkyrimNet: Failed to register vampire feed event - " + eventId)
-        EndIf
+    String attackerName = attacker.GetDisplayName()
+    String targetName = target.GetDisplayName()
+
+    ; Determine target state for context
+    String targetState = "unknown"
+    if target.GetSleepState() >= 3
+        targetState = "sleeping"
+    ElseIf target.IsInCombat()
+        targetState = "in_combat"
+    ElseIf target.GetSitState() == 3
+        targetState = "sitting"
     Else
-        SkyrimNetApi.RegisterEvent("vampire_feed", eventDataJson, attacker, target)
+        targetState = "standing"
     EndIf
 
+    String eventDataJson = "{" + \
+        "\"attacker\":\"" + attackerName + "\"," + \
+        "\"target\":\"" + targetName + "\"," + \
+        "\"failure_reason\":\"" + failureReason + "\"," + \
+        "\"was_in_combat\":" + BoolToJsonString(inCombat) + "," + \
+        "\"target_state\":\"" + targetState + "\"" + \
+        "}"
+
+    String eventId = "vampirefeed_failed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
+    String description = attackerName + " failed to feed on " + targetName
+
+    RegisterEventByContext(eventId, "vampire_feed_failed", description, eventDataJson, ttl, attacker, target, inCombat)
 EndFunction
 
 Function triggerSceneVampireBite()
     triggerScene(SPA_PairedAnim_VampireBite)
 EndFunction
 
-Function triggerSceneKillTarget()
-    triggerScene(SPA_PairedAnim_Kill)
+Function triggerSceneKillTarget(int timeout = 30)
+    triggerScene(SPA_PairedAnim_Kill, timeout)
 EndFunction
 
-Function triggerSceneSneakKillTarget()
-    triggerScene(SPA_PairedAnim_SneakKill)
+Function triggerSceneSneakKillTarget(int timeout = 30)
+    triggerScene(SPA_PairedAnim_SneakKill, timeout)
 EndFunction
 
 Function triggerSceneHug()
@@ -413,20 +413,29 @@ Idle Function calcKillMove(Actor attacker, Actor victim)
 EndFunction
 
 Function playBiteAnimatoin()
-    _playBiteAnimatoin(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef())
+    Actor attacker = VampAttackerRef.GetActorRef()
+    Actor victim = VampVictimRef.GetActorRef()
+
+    bool success = _playBiteAnimatoin(attacker, victim)
+
+    if success
+        registerVampireFeedEvent(attacker, victim)
+    else
+        registerVampireFeedFailedEvent(attacker, victim, "animation_failed")
+    endif
 EndFunction
 
-Function playHugAnimatoin()
-    _playHugAnimation(HugAttackerRef.GetActorRef(), HugVictimRef.GetActorRef())
+bool Function playHugAnimatoin()
+    return _playHugAnimation(HugAttackerRef.GetActorRef(), HugVictimRef.GetActorRef())
 EndFunction
 
-Function _playBiteAnimatoin(Actor attacker, Actor victim)
+bool Function _playBiteAnimatoin(Actor attacker, Actor victim)
     Idle feedAnim = calcFeedAnimation(attacker, victim)
-    playPairedAnimation(attacker, victim, feedAnim)
+    return playPairedAnimation(attacker, victim, feedAnim)
 EndFunction
 
-Function _playHugAnimation(Actor attacker, Actor victim)
-    playPairedAnimation(attacker, victim, pa_HugA)
+bool Function _playHugAnimation(Actor attacker, Actor victim)
+    return playPairedAnimation(attacker, victim, pa_HugA)
 EndFunction
 
 Function playKillActor(bool suppressAlarm=false)
@@ -434,11 +443,16 @@ Function playKillActor(bool suppressAlarm=false)
 EndFunction
 
 bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
+    ; AlignActorsForPairedAnimation(attacker, victim)
+
+    Debug.SendAnimationEvent(victim, "IdleStop")
+    Utility.Wait(0.2)
     return attacker.PlayIdleWithTarget(anim, victim)
 EndFunction
 
 
 Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, bool isProtected=false, bool suppressAlarm=false)
+    debugConsole("triggerin killing animation")
     if !ValidateKill(attacker, victim, allowEssential, isProtected)
         return
     endif
@@ -464,10 +478,9 @@ Function _killActor(Actor attacker, Actor victim, bool allowEssential=false, boo
         return
     endif
 
-    AlignActorsForKill(attacker, victim)
+    ; AlignActorsForPairedAnimation(attacker, victim)
+    ; Debug.SendAnimationEvent(victim, "IdleStop")
 
-
-    Debug.SendAnimationEvent(victim, "IdleStop")
     ToggleRestraints(victim, true)
 
     If (!RegisterForAnimationEvent(attacker, animEventVampire))
@@ -528,13 +541,13 @@ Function ToggleRestraints(Actor victim, bool lock)
     victim.SetDontMove(lock)
 EndFunction
 
-Function AlignActorsForKill(Actor attacker, Actor victim)
+Function AlignActorsForPairedAnimation(Actor attacker, Actor victim)
     float distance = attacker.GetDistance(victim)
     
     ; Move closer
     if distance > 120
         attacker.MoveTo(victim, 100 * Math.Sin(victim.GetAngleZ()), 100 * Math.Cos(victim.GetAngleZ()), 0)
-        Utility.Wait(0.1)
+        ; Utility.Wait(0.1)
     endif
 
     ; Rotate Victim

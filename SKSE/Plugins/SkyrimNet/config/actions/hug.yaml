@@ -1,0 +1,14 @@
+name: HugTarget
+description: Hug person
+questEditorId: SN_PairedAnim_Main
+scriptName: SPA_Main
+eligibilityFunctionName: HugActor_IsEligible
+executionFunctionName: HugActor_Execute
+parameterMapping:
+  - type: dynamic
+    name: akActor1
+    description: The person initiating the hug
+  - type: dynamic
+    name: akActor2
+    description: The target being hugged
+enabled: true

@@ -1,0 +1,18 @@
+name: ExecuteTarget
+description: Execute,kill target without combat if attacker is strong enough
+questEditorId: SN_PairedAnim_Main
+scriptName: SPA_Main
+eligibilityFunctionName: ExecuteTarget_IsEligible
+executionFunctionName: ExecuteTarget_Execute
+parameterMapping:
+  - type: dynamic
+    name: akActor1
+    description: The attacker executing the target
+  - type: dynamic
+    name: akActor2
+    description: The target being executed
+  - type: dynamic
+    name: silent
+    description: Whether execution is stealthy or normal. Possbile values true or false. 
+    defaultValue: false
+enabled: true
