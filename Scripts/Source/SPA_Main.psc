@@ -76,6 +76,10 @@ bool Function HugActor_IsEligible(Actor akActor1, Actor akActor2)
         console("Invalid targets: Invalid actor(s)")
         return false
     endif
+    if akActor2.IsDead()
+        console("Invalid target: Target is already dead")
+        return false
+    endif
     return true
 EndFunction
 
