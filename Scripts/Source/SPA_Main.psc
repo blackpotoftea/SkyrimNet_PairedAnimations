@@ -23,6 +23,7 @@ Idle Property IdleVampireStandingFront  Auto
 Idle Property pa_HugA  Auto
 Idle Property pa_1HMKillMoveDecapSlash  Auto  
 Idle Property pa_1HMKillMoveBackStab  Auto  
+Idle Property IdleStop_Loose  Auto  
 
 STATIC Property SPA_XMarker  Auto  
 
@@ -416,10 +417,7 @@ Idle Function calcKillMove(Actor attacker, Actor victim)
     return killmoveIdle
 EndFunction
 
-Function playBiteAnimatoin()
-    Actor attacker = VampAttackerRef.GetActorRef()
-    Actor victim = VampVictimRef.GetActorRef()
-
+Function playBiteAnimatoin(Actor attacker, Actor victim)
     bool success = _playBiteAnimatoin(attacker, victim)
 
     if success
@@ -429,8 +427,8 @@ Function playBiteAnimatoin()
     endif
 EndFunction
 
-bool Function playHugAnimatoin()
-    return _playHugAnimation(HugAttackerRef.GetActorRef(), HugVictimRef.GetActorRef())
+bool Function playHugAnimatoin(Actor attacker, Actor victim)
+    return _playHugAnimation(attacker, HugVictimRef.GetActorRef())
 EndFunction
 
 bool Function _playBiteAnimatoin(Actor attacker, Actor victim)
@@ -442,16 +440,23 @@ bool Function _playHugAnimation(Actor attacker, Actor victim)
     return playPairedAnimation(attacker, victim, pa_HugA)
 EndFunction
 
-Function playKillActor(bool suppressAlarm=false)
-    _killActor(VampAttackerRef.GetActorRef(), VampVictimRef.GetActorRef(), false, false, suppressAlarm)
+Function playKillActor(Actor attacker, Actor victim, bool suppressAlarm=false)
+    _killActor(attacker, victim, false, false, suppressAlarm)
 EndFunction
 
 bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
     ; AlignActorsForPairedAnimation(attacker, victim)
+    if !attacker || !victim
+        debugConsole("Invalid actor(s)")
+        return false
+    endif
 
-    Debug.SendAnimationEvent(victim, "IdleStop")
-    Utility.Wait(0.2)
+    ; attacker.PlayIdle(IdleStop_Loose)
+    victim.PlayIdle(IdleStop_Loose)
+
+    Utility.Wait(0.3)
     return attacker.PlayIdleWithTarget(anim, victim)
+
 EndFunction
 
 
@@ -593,6 +598,22 @@ bool Function ValidateKill(Actor attacker, Actor victim, bool allowEssential, bo
     endif
 
     return true
+EndFunction
+
+Actor Function getVampAttacker()
+    return VampAttackerRef.GetActorRef()
+EndFunction
+
+Actor Function getVampVictim()
+    return VampVictimRef.GetActorRef()
+EndFunction
+
+Actor Function getHugAttacker()
+    return HugAttackerRef.GetActorRef()
+EndFunction
+
+Actor Function getHugVictim()
+    return HugVictimRef.GetActorRef()
 EndFunction
 
 Function vampClearAliases()

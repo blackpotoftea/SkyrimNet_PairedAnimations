@@ -24,7 +24,9 @@ Function Fragment_10()
 ; Utility.Wait(0.2)
 SPA_Main sp_main = (GetOwningQuest() as SPA_Main)
 sp_main.debugConsole("trigger sneak kill animation")
-sp_main.playKillActor(true)
+Actor attacker = sp_main.getVampAttacker()
+Actor victim = sp_main.getVampVictim()
+sp_main.playKillActor(attacker, victim, true)
 ;END CODE
 EndFunction
 ;END FRAGMENT

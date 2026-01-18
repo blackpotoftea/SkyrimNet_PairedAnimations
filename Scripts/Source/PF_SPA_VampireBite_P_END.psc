@@ -7,7 +7,9 @@ Function Fragment_0(Actor akActor)
 ;BEGIN CODE
 SPA_Main sp_main = (GetOwningQuest() as SPA_Main)
 sp_main.debugConsole("trigger package VampireBite ")
-sp_main.playBiteAnimatoin()
+Actor attacker = sp_main.getVampAttacker()
+Actor victim = sp_main.getVampVictim()
+sp_main.playBiteAnimatoin(attacker, victim)
 ;END CODE
 EndFunction
 ;END FRAGMENT

@@ -25,7 +25,9 @@ Function Fragment_3()
 ;BEGIN CODE
 SPA_Main sp_main = (GetOwningQuest() as SPA_Main)
 sp_main.debugConsole("trigger normal kill animation")
-sp_main.playKillActor(false)
+Actor attacker = sp_main.getVampAttacker()
+Actor victim = sp_main.getVampVictim()
+sp_main.playKillActor(attacker, victim, false)
 ;Start Scene 2
 ;END CODE
 EndFunction

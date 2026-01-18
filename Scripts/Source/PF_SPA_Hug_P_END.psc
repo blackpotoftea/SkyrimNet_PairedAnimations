@@ -9,7 +9,9 @@ Debug.Notification("SkyrimNet_Paired Main loaded...")
 
 SPA_Main sp_main = (GetOwningQuest() as SPA_Main)
 sp_main.debugConsole("trigger package Hug")
-sp_main.playHugAnimatoin()
+Actor attacker = sp_main.getHugAttacker()
+Actor victim = sp_main.getHugVictim()
+sp_main.playHugAnimatoin(attacker, victim)
 ;END CODE
 EndFunction
 ;END FRAGMENT
