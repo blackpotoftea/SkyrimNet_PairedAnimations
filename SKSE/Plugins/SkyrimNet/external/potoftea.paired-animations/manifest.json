@@ -1,0 +1,16 @@
+{
+  "id": "potoftea.paired-animations",
+  "type": "bundle",
+  "title": "Paired Animations",
+  "tagline": "Lets characters hug, execute and feed on each other with real paired animations.",
+  "description": "SkyrimNet actions for the Paired Animations mod. Characters can act on each other physically, and the mod plays a real two-actor animation for it.\n\nThree actions, all driven by the `SPA_Main` script on the `SN_PairedAnim_Main` quest:\n\n- **HugTarget** - one character hugs another.\n- **ExecuteTarget** - a strong enough attacker kills a target outright, openly or from stealth.\n- **VampireBiteTarget** - a vampire feeds on a character who has agreed to it.\n\nRequires `SkyrimNet_PairedAnimations.esp`. Without it the actions have nothing to call into and stay ineligible.",
+  "author": "potoftea",
+  "tags": ["animation", "immersion"],
+  "nsfw": false,
+  "icon": "package",
+  "version": "1.1.0",
+  "min_skyrimnet_version": "0.25.0",
+  "mods": [
+    { "name": "SkyrimNet Paired Animations", "file": "SkyrimNet_PairedAnimations.esp", "required": true }
+  ]
+}
