@@ -33,6 +33,8 @@ Keyword Property vampire_keyword  Auto
 bool Property isPairedAnimRunning = false auto
 string Property animEventWaitFor = "PairEnd" AutoReadOnly
 string Property animEventVampire = "VFD_BloodDecals_Event" AutoReadOnly
+import PairedAnimUtil
+
 
 function startup()
     Debug.Notification("SkyrimNet_Paired Main loaded...")
@@ -362,6 +364,7 @@ EndFunction
 
 Idle Function calcFeedAnimation(Actor attacker, Actor target)
     Idle feedAnimIdle
+    
     ; debugConsole("Feedin target state:")
     ; debugConsole("health: "+target.GetActorValue("Health"))
     ; debugConsole("sleep: "+target.GetSleepState())
@@ -450,12 +453,18 @@ bool Function playPairedAnimation(Actor attacker, Actor victim, idle anim)
         debugConsole("Invalid actor(s)")
         return false
     endif
-
     ; attacker.PlayIdle(IdleStop_Loose)
     victim.PlayIdle(IdleStop_Loose)
 
     Utility.Wait(0.3)
-    return attacker.PlayIdleWithTarget(anim, victim)
+    Int pluginVersion = SKSE.GetPluginVersion("PairedAnimUtil")
+    If pluginVersion > 0
+        PairedAnimUtil.PU_PlayAnimation(attacker, victim, anim)
+    Else
+        attacker.PlayIdleWithTarget(anim, victim)
+    EndIf
+
+    return True
 
 EndFunction
 
