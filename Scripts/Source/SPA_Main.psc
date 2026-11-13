@@ -191,11 +191,11 @@ Function registerEventSchemaFeed(bool isEphemeral = false)
         "\"verbose\":\"Vampire Feeding: {{attacker}} fed on {{target}} - Type: {{feed_type}}, Detected: {{was_detected}}, Combat: {{in_combat}}, Victim Aware: {{target_aware}}\"" + \
         "}"
 
-    SkyrimNetApi.RegisterEventSchema("vampire_feed", "Vampire Feeding Event", \
+    SkyrimNetApi.RegisterEventSchema("spa_vampire_feed", "Vampire Feeding Event", \
                                 "A vampire feeding on a victim", \
                                 fieldsJson, formatTemplatesJson, isEphemeral, 120000)
 
-    console("Registered vampire_feed event schema")
+    console("Registered spa_vampire_feed event schema")
 
 EndFunction
 
@@ -215,11 +215,11 @@ Function registerEventSchemaFeedFailed(bool isEphemeral = false)
         "\"verbose\":\"Failed Vampire Feed: {{attacker}} attempted to feed on {{target}} - Reason: {{failure_reason}}, Combat: {{was_in_combat}}, Target State: {{target_state}}\"" + \
         "}"
 
-    SkyrimNetApi.RegisterEventSchema("vampire_feed_failed", "Failed Vampire Feeding Attempt", \
+    SkyrimNetApi.RegisterEventSchema("spa_vampire_feed_failed", "Failed Vampire Feeding Attempt", \
                                 "A vampire's failed attempt to feed on a victim", \
                                 fieldsJson, formatTemplatesJson, isEphemeral, 120000)
 
-    console("Registered vampire_feed_failed event schema")
+    console("Registered spa_vampire_feed_failed event schema")
 
 EndFunction
 
@@ -284,7 +284,7 @@ Function registerVampireFeedEvent(Actor attacker, Actor target, int ttl = 120)
     String eventId = "vampirefeed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
     String description = attackerName + " feeds on " + targetName
 
-    RegisterEventByContext(eventId, "vampire_feed", description, eventDataJson, ttl, attacker, target, inCombat)
+    RegisterEventByContext(eventId, "spa_vampire_feed", description, eventDataJson, ttl, attacker, target, inCombat)
 EndFunction
 
 Function registerVampireFeedFailedEvent(Actor attacker, Actor target, string failureReason = "animation_failed", int ttl = 120)
@@ -321,7 +321,7 @@ Function registerVampireFeedFailedEvent(Actor attacker, Actor target, string fai
     String eventId = "vampirefeed_failed_" + target.GetFormID() + "_" + (Utility.GetCurrentRealTime() as Int)
     String description = attackerName + " failed to feed on " + targetName
 
-    RegisterEventByContext(eventId, "vampire_feed_failed", description, eventDataJson, ttl, attacker, target, inCombat)
+    RegisterEventByContext(eventId, "spa_vampire_feed_failed", description, eventDataJson, ttl, attacker, target, inCombat)
 EndFunction
 
 Function triggerSceneVampireBite()
